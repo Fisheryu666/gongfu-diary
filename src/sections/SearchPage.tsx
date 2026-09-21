@@ -1,4 +1,4 @@
-// 历史搜索 + 数据导出/导入
+// 历史查询（按日期选择）+ 数据导出/导入
 import { useMemo, useRef, useState } from 'react';
 import {
   downloadBackup,
@@ -13,35 +13,15 @@ interface Props {
   onOpenDate: (date: string) => void;
 }
 
-function Highlight({ text, kw }: { text: string; kw: string }) {
-  if (!kw) return <>{text}</>;
-  const idx = text.toLowerCase().indexOf(kw.toLowerCase());
-  if (idx < 0) return <>{text}</>;
-  const start = Math.max(0, idx - 20);
-  const end = Math.min(text.length, idx + kw.length + 40);
-  return (
-    <>
-      {start > 0 && '…'}
-      {text.slice(start, idx)}
-      <mark className="rounded bg-amber-200 px-0.5 text-stone-900">
-        {text.slice(idx, idx + kw.length)}
-      </mark>
-      {text.slice(idx + kw.length, end)}
-      {end < text.length && '…'}
-    </>
-  );
-}
-
 export default function SearchPage({ onOpenDate }: Props) {
-  const [kw, setKw] = useState('');
   const [from, setFrom] = useState('');
   const [to, setTo] = useState('');
   const [importMsg, setImportMsg] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
-  const searching = !!(kw.trim() || from || to);
+  const searching = !!(from || to);
   const hits = useMemo(
-    () => searchEntries(kw, { from: from || undefined, to: to || undefined }),
-    [kw, from, to]
+    () => searchEntries('', { from: from || undefined, to: to || undefined }),
+    [from, to]
   );
 
   const allDates = useMemo(
@@ -60,7 +40,7 @@ export default function SearchPage({ onOpenDate }: Props) {
         })
         .sort()
         .reverse()
-        .slice(0, 6), // 快速查看只保留最近 6 天，更早的记录用关键词搜索
+        .slice(0, 6), // 快速查看只保留最近 6 天，更早的记录选日期查询
     []
   );
 
@@ -83,63 +63,45 @@ export default function SearchPage({ onOpenDate }: Props) {
 
   return (
     <div className="space-y-4 pb-6">
-      <div className="relative">
-        <input
-          value={kw}
-          onChange={(e) => setKw(e.target.value)}
-          placeholder="搜索历史记录：关键词…"
-          className="w-full rounded-xl border border-stone-300 bg-white/90 px-4 py-3 pl-10 text-[15px] text-stone-800 placeholder-stone-400 outline-none focus:border-red-800/60 focus:ring-1 focus:ring-red-800/30"
-        />
-        <svg
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-          className="absolute left-3 top-3.5 h-5 w-5 text-stone-400"
-        >
-          <circle cx="11" cy="11" r="7" />
-          <path d="m21 21-4.3-4.3" strokeLinecap="round" />
-        </svg>
-      </div>
-
-      {/* 可选日期范围：不选则搜索全部历史 */}
-      <div className="flex items-center gap-2">
-        <span className="shrink-0 text-xs text-stone-500">日期</span>
-        <input
-          type="date"
-          value={from}
-          onChange={(e) => setFrom(e.target.value)}
-          aria-label="起始日期"
-          className="min-w-0 flex-1 rounded-lg border border-stone-300 bg-white/90 px-2 py-2 text-sm text-stone-700 outline-none focus:border-red-800/60"
-        />
-        <span className="shrink-0 text-xs text-stone-400">至</span>
-        <input
-          type="date"
-          value={to}
-          onChange={(e) => setTo(e.target.value)}
-          aria-label="截止日期"
-          className="min-w-0 flex-1 rounded-lg border border-stone-300 bg-white/90 px-2 py-2 text-sm text-stone-700 outline-none focus:border-red-800/60"
-        />
-        {(from || to) && (
-          <button
-            onClick={() => {
-              setFrom('');
-              setTo('');
-            }}
-            className="shrink-0 rounded-lg bg-stone-200/80 px-2.5 py-2 text-xs text-stone-600 hover:bg-stone-300/80"
-          >
-            清除
-          </button>
-        )}
+      {/* 选择日期查历史：选一个日期查当天，选两个查时间段 */}
+      <div className="rounded-xl border border-stone-200 bg-[#fdfaf3] p-3 shadow-sm">
+        <div className="mb-2 text-center text-xs text-stone-500">
+          选择日期查看历史记录
+        </div>
+        <div className="flex items-center gap-2">
+          <input
+            type="date"
+            value={from}
+            onChange={(e) => setFrom(e.target.value)}
+            aria-label="起始日期"
+            className="min-w-0 flex-1 rounded-lg border border-stone-300 bg-white/90 px-2 py-2.5 text-sm text-stone-700 outline-none focus:border-red-800/60"
+          />
+          <span className="shrink-0 text-xs text-stone-400">至</span>
+          <input
+            type="date"
+            value={to}
+            onChange={(e) => setTo(e.target.value)}
+            aria-label="截止日期"
+            className="min-w-0 flex-1 rounded-lg border border-stone-300 bg-white/90 px-2 py-2.5 text-sm text-stone-700 outline-none focus:border-red-800/60"
+          />
+          {(from || to) && (
+            <button
+              onClick={() => {
+                setFrom('');
+                setTo('');
+              }}
+              className="shrink-0 rounded-lg bg-stone-200/80 px-2.5 py-2.5 text-xs text-stone-600 hover:bg-stone-300/80"
+            >
+              清除
+            </button>
+          )}
+        </div>
       </div>
 
       {searching ? (
         <>
           <div className="text-xs text-stone-500">
-            {kw.trim()
-              ? `找到 ${hits.length} 条包含「${kw.trim()}」的记录`
-              : `该时间段共 ${hits.length} 条记录`}
-            {(from || to) && `（${from || '最早'} ~ ${to || '今天'}）`}
+            {from || '最早'} ~ {to || '今天'} · 共 {hits.length} 条记录
           </div>
           <div className="space-y-2">
             {hits.map((h, i) => (
@@ -154,20 +116,20 @@ export default function SearchPage({ onOpenDate }: Props) {
                     {h.section}
                   </span>
                 </div>
-                <div className="text-sm leading-relaxed text-stone-700">
-                  <Highlight text={h.text} kw={kw.trim()} />
-                </div>
+                <div className="line-clamp-2 text-sm leading-relaxed text-stone-700">{h.text}</div>
               </button>
             ))}
             {hits.length === 0 && (
-              <div className="py-10 text-center text-sm text-stone-400">没有找到相关记录</div>
+              <div className="py-10 text-center text-sm text-stone-400">
+                该时间段没有记录
+              </div>
             )}
           </div>
         </>
       ) : (
         <>
           <div className="text-xs text-stone-500">
-            最近 6 天记录 · 点击查看；更早的记录请用上方关键词或日期搜索
+            最近 6 天记录 · 点击查看；更早的记录请在上方选择日期
           </div>
           <div className="grid grid-cols-3 gap-2">
             {allDates.map((d) => (
