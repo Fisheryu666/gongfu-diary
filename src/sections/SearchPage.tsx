@@ -7,21 +7,21 @@ import {
   loadEntry,
   searchEntries,
 } from '@/lib/store';
-import { cnDate } from '@/types/diary';
+import { cnDate, shiftDate, todayStr } from '@/types/diary';
 
 interface Props {
   onOpenDate: (date: string) => void;
 }
 
 export default function SearchPage({ onOpenDate }: Props) {
-  const [from, setFrom] = useState('');
-  const [to, setTo] = useState('');
+  // 默认选中昨天：早上补记、晚间复盘后最常回看的就是昨天
+  const [day, setDay] = useState(() => shiftDate(todayStr(), -1));
   const [importMsg, setImportMsg] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
-  const searching = !!(from || to);
+  const searching = !!day;
   const hits = useMemo(
-    () => searchEntries('', { from: from || undefined, to: to || undefined }),
-    [from, to]
+    () => searchEntries('', { from: day || undefined, to: day || undefined }),
+    [day]
   );
 
   const allDates = useMemo(
@@ -63,33 +63,22 @@ export default function SearchPage({ onOpenDate }: Props) {
 
   return (
     <div className="space-y-4 pb-6">
-      {/* 选择日期查历史：选一个日期查当天，选两个查时间段 */}
+      {/* 选择一个日期，查看那天的记录 */}
       <div className="rounded-xl border border-stone-200 bg-[#fdfaf3] p-3 shadow-sm">
         <div className="mb-2 text-center text-xs text-stone-500">
-          选择日期查看历史记录
+          选择一个日期，查看那天的记录
         </div>
         <div className="flex items-center gap-2">
           <input
             type="date"
-            value={from}
-            onChange={(e) => setFrom(e.target.value)}
-            aria-label="起始日期"
-            className="min-w-0 flex-1 rounded-lg border border-stone-300 bg-white/90 px-2 py-2.5 text-sm text-stone-700 outline-none focus:border-red-800/60"
+            value={day}
+            onChange={(e) => setDay(e.target.value)}
+            aria-label="选择日期"
+            className="min-w-0 flex-1 rounded-lg border border-stone-300 bg-white/90 px-3 py-2.5 text-center text-sm text-stone-700 outline-none focus:border-red-800/60"
           />
-          <span className="shrink-0 text-xs text-stone-400">至</span>
-          <input
-            type="date"
-            value={to}
-            onChange={(e) => setTo(e.target.value)}
-            aria-label="截止日期"
-            className="min-w-0 flex-1 rounded-lg border border-stone-300 bg-white/90 px-2 py-2.5 text-sm text-stone-700 outline-none focus:border-red-800/60"
-          />
-          {(from || to) && (
+          {day && (
             <button
-              onClick={() => {
-                setFrom('');
-                setTo('');
-              }}
+              onClick={() => setDay('')}
               className="shrink-0 rounded-lg bg-stone-200/80 px-2.5 py-2.5 text-xs text-stone-600 hover:bg-stone-300/80"
             >
               清除
@@ -101,7 +90,7 @@ export default function SearchPage({ onOpenDate }: Props) {
       {searching ? (
         <>
           <div className="text-xs text-stone-500">
-            {from || '最早'} ~ {to || '今天'} · 共 {hits.length} 条记录
+            {cnDate(day)} · 共 {hits.length} 条记录
           </div>
           <div className="space-y-2">
             {hits.map((h, i) => (
@@ -121,7 +110,7 @@ export default function SearchPage({ onOpenDate }: Props) {
             ))}
             {hits.length === 0 && (
               <div className="py-10 text-center text-sm text-stone-400">
-                该时间段没有记录
+                这一天没有记录
               </div>
             )}
           </div>
