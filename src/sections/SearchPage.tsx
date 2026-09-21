@@ -53,7 +53,8 @@ export default function SearchPage({ onOpenDate }: Props) {
           );
         })
         .sort()
-        .reverse(),
+        .reverse()
+        .slice(0, 6), // 快速查看只保留最近 6 天，更早的记录用关键词搜索
     []
   );
 
@@ -125,7 +126,9 @@ export default function SearchPage({ onOpenDate }: Props) {
         </>
       ) : (
         <>
-          <div className="text-xs text-stone-500">全部记录（{allDates.length} 天）· 点击查看</div>
+          <div className="text-xs text-stone-500">
+            最近 6 天记录 · 点击查看；更早的记录请用上方关键词搜索
+          </div>
           <div className="grid grid-cols-3 gap-2">
             {allDates.map((d) => (
               <button
