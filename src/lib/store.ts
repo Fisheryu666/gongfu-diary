@@ -97,15 +97,25 @@ export interface SearchHit {
   text: string;
 }
 
-export function searchEntries(keyword: string): SearchHit[] {
+export interface SearchOptions {
+  from?: string; // 起始日期 YYYY-MM-DD（可选）
+  to?: string; // 截止日期 YYYY-MM-DD（可选）
+}
+
+export function searchEntries(keyword: string, opts: SearchOptions = {}): SearchHit[] {
   const kw = keyword.trim().toLowerCase();
-  if (!kw) return [];
+  const { from, to } = opts;
+  if (!kw && !from && !to) return [];
   const hits: SearchHit[] = [];
   const all = loadEntries();
   const plans = loadPlans();
 
   const push = (date: string, section: string, text: string) => {
-    if (text && text.toLowerCase().includes(kw)) hits.push({ date, section, text });
+    if (!text || !text.trim()) return;
+    if (from && date < from) return;
+    if (to && date > to) return;
+    if (kw && !text.toLowerCase().includes(kw)) return;
+    hits.push({ date, section, text });
   };
 
   for (const raw of Object.values(all)) {

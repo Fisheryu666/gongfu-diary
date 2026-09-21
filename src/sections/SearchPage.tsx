@@ -34,9 +34,15 @@ function Highlight({ text, kw }: { text: string; kw: string }) {
 
 export default function SearchPage({ onOpenDate }: Props) {
   const [kw, setKw] = useState('');
+  const [from, setFrom] = useState('');
+  const [to, setTo] = useState('');
   const [importMsg, setImportMsg] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
-  const hits = useMemo(() => searchEntries(kw), [kw]);
+  const searching = !!(kw.trim() || from || to);
+  const hits = useMemo(
+    () => searchEntries(kw, { from: from || undefined, to: to || undefined }),
+    [kw, from, to]
+  );
 
   const allDates = useMemo(
     () =>
@@ -96,10 +102,44 @@ export default function SearchPage({ onOpenDate }: Props) {
         </svg>
       </div>
 
-      {kw.trim() ? (
+      {/* 可选日期范围：不选则搜索全部历史 */}
+      <div className="flex items-center gap-2">
+        <span className="shrink-0 text-xs text-stone-500">日期</span>
+        <input
+          type="date"
+          value={from}
+          onChange={(e) => setFrom(e.target.value)}
+          aria-label="起始日期"
+          className="min-w-0 flex-1 rounded-lg border border-stone-300 bg-white/90 px-2 py-2 text-sm text-stone-700 outline-none focus:border-red-800/60"
+        />
+        <span className="shrink-0 text-xs text-stone-400">至</span>
+        <input
+          type="date"
+          value={to}
+          onChange={(e) => setTo(e.target.value)}
+          aria-label="截止日期"
+          className="min-w-0 flex-1 rounded-lg border border-stone-300 bg-white/90 px-2 py-2 text-sm text-stone-700 outline-none focus:border-red-800/60"
+        />
+        {(from || to) && (
+          <button
+            onClick={() => {
+              setFrom('');
+              setTo('');
+            }}
+            className="shrink-0 rounded-lg bg-stone-200/80 px-2.5 py-2 text-xs text-stone-600 hover:bg-stone-300/80"
+          >
+            清除
+          </button>
+        )}
+      </div>
+
+      {searching ? (
         <>
           <div className="text-xs text-stone-500">
-            找到 {hits.length} 条包含「{kw.trim()}」的记录
+            {kw.trim()
+              ? `找到 ${hits.length} 条包含「${kw.trim()}」的记录`
+              : `该时间段共 ${hits.length} 条记录`}
+            {(from || to) && `（${from || '最早'} ~ ${to || '今天'}）`}
           </div>
           <div className="space-y-2">
             {hits.map((h, i) => (
@@ -127,7 +167,7 @@ export default function SearchPage({ onOpenDate }: Props) {
       ) : (
         <>
           <div className="text-xs text-stone-500">
-            最近 6 天记录 · 点击查看；更早的记录请用上方关键词搜索
+            最近 6 天记录 · 点击查看；更早的记录请用上方关键词或日期搜索
           </div>
           <div className="grid grid-cols-3 gap-2">
             {allDates.map((d) => (
